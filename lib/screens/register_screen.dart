@@ -1,3 +1,6 @@
+// lib/screens/register_screen.dart
+
+import 'dart:async';                        // ★ 추가
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -21,14 +24,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _passwordCtrl = TextEditingController();
   final TextEditingController _confirmCtrl = TextEditingController();
 
-  Timer? _emailDebounce;
+  Timer? _emailDebounce;    // Timer 타입이 정의됩니다.
   Timer? _nickDebounce;
 
   bool _emailChecked = false, _emailExists = false;
   bool _nickChecked = false, _nickExists = false;
   bool _passwordsMatch = true;
   String? _passwordError;
-  String? _gender; // 'M' or 'F'
+  String? _gender; // 'M' 또는 'F'
 
   @override
   void initState() {
@@ -113,7 +116,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final pass = _passwordCtrl.text;
     final conf = _confirmCtrl.text;
 
-    if ([email, name, nick, phone, pass, conf, _gender].contains(null) ||
+    if ([email, name, nick, phone, pass, conf, _gender]
+        .contains(null) ||
         [email, name, nick, phone, pass, conf].any((s) => s.isEmpty)) {
       _showError('모든 항목을 입력해 주세요.');
       return;
@@ -153,9 +157,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _showError(String m) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(m), backgroundColor: Colors.red),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(m), backgroundColor: Colors.red));
   }
 
   @override
