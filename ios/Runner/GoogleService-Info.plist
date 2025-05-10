@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>API_KEY</key>
+	<string>AIzaSyAHFJ3jw-wo5pqyKp-2V8UGfqzIQR_BWWE</string>
+	<key>GCM_SENDER_ID</key>
+	<string>853961275760</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>relay</string>
+	<key>PROJECT_ID</key>
+	<string>relay-app-597ec</string>
+	<key>STORAGE_BUCKET</key>
+	<string>relay-app-597ec.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:853961275760:ios:433dc6e23677b3dc2fb7b5</string>
+</dict>
+</plist>
