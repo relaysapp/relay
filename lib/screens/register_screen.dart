@@ -69,7 +69,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_emailExists ? '이미 사용 중인 이메일입니다.' : '사용 가능한 이메일입니다.'),
+          content: Text(
+            _emailExists ? '이미 사용 중인 이메일입니다.' : '사용 가능한 이메일입니다.',
+          ),
         ),
       );
     });
@@ -91,7 +93,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_nickExists ? '이미 사용 중인 닉네임입니다.' : '사용 가능한 닉네임입니다.'),
+          content: Text(
+            _nickExists ? '이미 사용 중인 닉네임입니다.' : '사용 가능한 닉네임입니다.',
+          ),
         ),
       );
     });
@@ -105,8 +109,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final nick = _nickCtrl.text.trim();
     final phone = _phoneCtrl.text.trim();
 
-    if ([email, pass, conf, name, nick, phone, _gender].contains(null) ||
-        [email, pass, conf, name, nick, phone].any((s) => s.isEmpty)) {
+    if ([email, pass, conf, name, nick, phone, _gender]
+            .contains(null) ||
+        [email, pass, conf, name, nick, phone]
+            .any((s) => s.isEmpty)) {
       _showError('모든 항목을 입력해 주세요.');
       return;
     }
@@ -124,7 +130,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     try {
-      final uc = await _auth.createUserWithEmailAndPassword(email: email, password: pass);
+      final uc = await _auth.createUserWithEmailAndPassword(
+          email: email, password: pass);
       await _firestore.collection('users').doc(uc.user!.uid).set({
         'email': email,
         'name': name,
@@ -152,12 +159,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext c) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(c),
-        ),
+        automaticallyImplyLeading: true,
+        centerTitle: true,
+        title: const Text('회원가입'),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -165,10 +169,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('회원가입',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 32),
-
               // 1. 이메일
               _buildField('이메일', _emailCtrl,
                   suffix: TextButton(onPressed: _checkEmailDup, child: const Text('중복확인'))),
@@ -193,8 +193,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               // 7. 성별
               _buildGenderSelector(),
               const SizedBox(height: 32),
-
-              // 가입하기 버튼 (가운데 정렬)
+              // 가입하기 버튼
               SizedBox(
                 width: 320,
                 child: ElevatedButton(
@@ -210,11 +209,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildField(String label, TextEditingController ctrl,
-      {Widget? suffix,
-      bool obscure = false,
-      TextInputType keyboard = TextInputType.text,
-      String? errorText}) {
+  Widget _buildField(
+      String label, TextEditingController ctrl, {
+        Widget? suffix,
+        bool obscure = false,
+        TextInputType keyboard = TextInputType.text,
+        String? errorText,
+      }) {
     return SizedBox(
       width: 320,
       child: TextField(
