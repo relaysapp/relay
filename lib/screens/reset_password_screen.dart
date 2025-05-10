@@ -24,34 +24,59 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: e);
       setState(() => _sent = true);
     } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('전송 실패')));
+      setState(() => _sent = false);
+      // inline errorText or snackbar if needed
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(centerTitle: true, title: const Text('비밀번호 찾기')),
+      // back arrow
+      appBar: AppBar(
+        automaticallyImplyLeading: true,
+        centerTitle: true,
+        title: const Text('비밀번호 찾기'),
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Text('비밀번호 재설정 메일 전송', style: TextStyle(fontSize: 20)),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: 320,
-                child: TextField(
-                  controller: _emailCtrl,
-                  decoration: const InputDecoration(labelText: '이메일', border: UnderlineInputBorder()),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 제목: 가운데, 아래쪽으로
+                const SizedBox(height: 16),
+                const Text(
+                  '비밀번호 재설정 메일 전송',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: 320,
-                child: ElevatedButton(onPressed: _send, child: Text(_sent ? '전송됨' : '전송하기')),
-              ),
-            ]),
+                const SizedBox(height: 24),
+
+                // 이메일 입력
+                SizedBox(
+                  width: 320,
+                  child: TextField(
+                    controller: _emailCtrl,
+                    decoration: const InputDecoration(
+                      labelText: '이메일',
+                      border: UnderlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // 전송 버튼
+                SizedBox(
+                  width: 320,
+                  child: ElevatedButton(
+                    onPressed: _send,
+                    child: Text(_sent ? '전송됨' : '전송하기'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

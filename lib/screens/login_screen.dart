@@ -1,5 +1,3 @@
-// lib/screens/login_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,8 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     _loadPrefs();
     if (_autoLogin && _auth.currentUser != null) {
-      Future.microtask(
-          () => Navigator.pushReplacementNamed(context, '/home'));
+      Future.microtask(() => Navigator.pushReplacementNamed(context, '/home'));
     }
   }
 
@@ -58,15 +55,12 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailCtrl.text.trim();
     final pwd = _passwordCtrl.text;
     setState(() => _errorText = null);
-
     if (email.isEmpty || pwd.isEmpty) {
       setState(() => _errorText = '이메일 또는 비밀번호가 잘못 입력되었습니다.');
       return;
     }
-
     try {
-      await _auth.signInWithEmailAndPassword(
-          email: email, password: pwd);
+      await _auth.signInWithEmailAndPassword(email: email, password: pwd);
       if (_saveId) {
         final p = await SharedPreferences.getInstance();
         await p.setString('savedEmail', email);
@@ -85,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   @override
-  Widget build(BuildContext c) {
+  Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -94,15 +88,14 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // 1) 타이틀
+                // 1) 상단 제목
                 const Text(
                   '로그인',
-                  style: TextStyle(
-                      fontSize: 28, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 32),
 
-                // 2) 이메일 입력
+                // 2) 이메일
                 SizedBox(
                   width: 320,
                   child: TextField(
@@ -115,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // 3) 비밀번호 입력
+                // 3) 비밀번호
                 SizedBox(
                   width: 320,
                   child: TextField(
@@ -128,34 +121,37 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
 
-                // 4) 오류 메시지
+                // 4) 오류 텍스트 (가운데 정렬)
                 if (_errorText != null) ...[
                   const SizedBox(height: 8),
-                  Text(_errorText!,
-                      style: const TextStyle(color: Colors.red)),
+                  SizedBox(
+                    width: 320,
+                    child: Text(
+                      _errorText!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
                 ],
                 const SizedBox(height: 24),
 
-                // 5) 체크박스
+                // 5) 체크박스 (가운데 정렬)
                 SizedBox(
                   width: 320,
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Checkbox(
-                          value: _saveId,
-                          onChanged: _onSaveIdChanged),
+                      Checkbox(value: _saveId, onChanged: _onSaveIdChanged),
                       const Text('아이디 저장'),
                       const SizedBox(width: 16),
-                      Checkbox(
-                          value: _autoLogin,
-                          onChanged: _onAutoLoginChanged),
+                      Checkbox(value: _autoLogin, onChanged: _onAutoLoginChanged),
                       const Text('자동 로그인'),
                     ],
                   ),
                 ),
                 const SizedBox(height: 24),
 
-                // 6) 버튼들 순서대로
+                // 6) 버튼들 순서대로 (가운데 정렬)
                 SizedBox(
                   width: 320,
                   child: ElevatedButton(
@@ -165,8 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(
                   width: 320,
                   child: TextButton(
-                      onPressed: () =>
-                          Navigator.pushNamed(c, '/register'),
+                      onPressed: () => Navigator.pushNamed(context, '/register'),
                       child: const Text('회원가입')),
                 ),
                 const SizedBox(height: 8),
@@ -174,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: 320,
                   child: TextButton(
                       onPressed: () =>
-                          Navigator.pushNamed(c, '/reset_password'),
+                          Navigator.pushNamed(context, '/reset_password'),
                       child: const Text('비밀번호 찾기')),
                 ),
               ],
