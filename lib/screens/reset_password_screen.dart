@@ -38,80 +38,61 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: [
-              const SizedBox(height: 16),
-
-              // ── 헤더: 뒤로가기 + 중앙 제목 ──
-              Stack(
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-                  const Align(
-                    alignment: Alignment.center,
-                    child: Text(
-                      '비밀번호 찾기',
-                      style:
-                          TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 32),
-
-              // 이메일 입력
-              SizedBox(
-                width: 320,
-                child: TextField(
-                  controller: _emailCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '이메일',
-                    border: UnderlineInputBorder(),
-                  ),
-                ),
-              ),
-
-              // 경고/완료 문구
-              if (_errorText != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  _errorText!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ],
-              if (_sent) ...[
-                const SizedBox(height: 8),
-                const Text(
-                  '메일이 전송되었습니다.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.green),
-                ),
-              ],
-
-              const SizedBox(height: 32),
-
-              // 전송 버튼
-              SizedBox(
-                width: 320,
-                child: ElevatedButton(
-                  onPressed: _sendReset,
-                  child: Text(_sent ? '전송됨' : '전송하기'),
-                ),
-              ),
-            ],
-          ),
+      // AppBar 로 화살표 자동 표시
+      appBar: AppBar(
+        automaticallyImplyLeading: true,
+        centerTitle: true,
+        title: const Text(
+          '비밀번호 찾기',
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
         ),
       ),
+      body: LayoutBuilder(builder: (ctx, cons) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: cons.maxHeight),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 320,
+                  child: TextField(
+                    controller: _emailCtrl,
+                    decoration: const InputDecoration(
+                      labelText: '이메일',
+                      border: UnderlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (_errorText != null) ...[
+                  Text(
+                    _errorText!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                if (_sent) ...[
+                  const Text(
+                    '메일이 전송되었습니다.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.green),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                SizedBox(
+                  width: 320,
+                  child: ElevatedButton(
+                    onPressed: _sendReset,
+                    child: Text(_sent ? '전송됨' : '전송하기'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }),
     );
   }
 }

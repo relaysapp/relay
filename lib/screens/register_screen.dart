@@ -10,11 +10,9 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  // Firebase 인스턴스
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
 
-  // 컨트롤러들
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
@@ -22,16 +20,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nickCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
 
-  // 디바운스 타이머
   Timer? _emailDebounce, _nickDebounce;
-
-  // 상태 변수들
   bool _emailChecked = false, _emailExists = false;
   bool _nickChecked = false, _nickExists = false;
   bool _passwordsMatch = true;
-  String? _passwordError;
-  String? _gender;
-  String? _errorText;
+  String? _passwordError, _gender, _errorText;
 
   @override
   void initState() {
@@ -52,7 +45,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // 비밀번호-확인 일치 검사
   void _checkPasswordMatch() {
     setState(() {
       _passwordsMatch = _passwordCtrl.text == _confirmCtrl.text;
@@ -61,15 +53,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
   }
 
-  // 이메일 중복 검사
   void _checkEmailDup() {
     _emailDebounce?.cancel();
     _emailDebounce = Timer(const Duration(milliseconds: 500), () async {
-      final email = _emailCtrl.text.trim();
-      if (email.isEmpty) return;
+      final e = _emailCtrl.text.trim();
+      if (e.isEmpty) return;
       final q = await _firestore
           .collection('users')
-          .where('email', isEqualTo: email)
+          .where('email', isEqualTo: e)
           .limit(1)
           .get();
       setState(() {
@@ -78,23 +69,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            _emailExists ? '이미 사용 중인 이메일입니다.' : '사용 가능한 이메일입니다.',
-          ),
+          content: Text(_emailExists
+              ? '이미 사용 중인 이메일입니다.'
+              : '사용 가능한 이메일입니다.'),
         ),
       );
     });
   }
 
-  // 닉네임 중복 검사
   void _checkNickDup() {
     _nickDebounce?.cancel();
     _nickDebounce = Timer(const Duration(milliseconds: 500), () async {
-      final nick = _nickCtrl.text.trim();
-      if (nick.isEmpty) return;
+      final n = _nickCtrl.text.trim();
+      if (n.isEmpty) return;
       final q = await _firestore
           .collection('users')
-          .where('nickname', isEqualTo: nick)
+          .where('nickname', isEqualTo: n)
           .limit(1)
           .get();
       setState(() {
@@ -103,15 +93,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            _nickExists ? '이미 사용 중인 닉네임입니다.' : '사용 가능한 닉네임입니다.',
-          ),
+          content: Text(_nickExists
+              ? '이미 사용 중인 닉네임입니다.'
+              : '사용 가능한 닉네임입니다.'),
         ),
       );
     });
   }
 
-  // 가입 처리
   Future<void> _register() async {
     final email = _emailCtrl.text.trim();
     final pass = _passwordCtrl.text;
@@ -120,12 +109,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final nick = _nickCtrl.text.trim();
     final phone = _phoneCtrl.text.trim();
 
-    // 유효성 검사
     String? err;
-    if ([email, pass, conf, name, nick, phone, _gender]
-        .contains(null) ||
-        [email, pass, conf, name, nick, phone]
-            .any((s) => s.isEmpty)) {
+    if ([email, pass, conf, name, nick, phone, _gender].contains(null) ||
+        [email, pass, conf, name, nick, phone].any((s) => s.isEmpty)) {
       err = '모든 항목을 입력해 주세요.';
     } else if (!_emailChecked || _emailExists) {
       err = '이메일 중복 확인을 해주세요.';
@@ -159,111 +145,86 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: [
-              const SizedBox(height: 16),
-
-              // ── 헤더: 뒤로가기 + 중앙 제목 ──
-              Stack(
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-                  const Align(
-                    alignment: Alignment.center,
-                    child: Text(
-                      '회원가입',
-                      style:
-                          TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 32),
-
-              // 이메일
-              _buildField(
-                '이메일',
-                _emailCtrl,
-                suffix: TextButton(
-                  onPressed: _checkEmailDup,
-                  child: const Text('중복확인'),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // 비밀번호
-              _buildField('비밀번호', _passwordCtrl, obscure: true),
-              const SizedBox(height: 16),
-
-              // 비밀번호 확인
-              _buildField(
-                '비밀번호 확인',
-                _confirmCtrl,
-                obscure: true,
-                errorText: _passwordError,
-              ),
-              const SizedBox(height: 16),
-
-              // 이름
-              _buildField('이름', _nameCtrl),
-              const SizedBox(height: 16),
-
-              // 닉네임
-              _buildField(
-                '닉네임',
-                _nickCtrl,
-                suffix: TextButton(
-                  onPressed: _checkNickDup,
-                  child: const Text('중복확인'),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // 휴대전화
-              _buildField('휴대전화', _phoneCtrl,
-                  keyboard: TextInputType.phone),
-              const SizedBox(height: 16),
-
-              // 성별
-              _buildGenderSelector(),
-              const SizedBox(height: 24),
-
-              // 가입하기 버튼
-              SizedBox(
-                width: 320,
-                child: ElevatedButton(
-                  onPressed: _register,
-                  child: const Text('가입하기'),
-                ),
-              ),
-
-              // 경고 문구 (가운데 정렬)
-              if (_errorText != null) ...[
-                const SizedBox(height: 16),
-                Text(
-                  _errorText!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ],
-              const SizedBox(height: 16),
-            ],
-          ),
+      // AppBar 사용 → 기본 화살표 아이콘 보장
+      appBar: AppBar(
+        automaticallyImplyLeading: true,
+        centerTitle: true,
+        title: const Text(
+          '회원가입',
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
         ),
       ),
+      body: LayoutBuilder(builder: (ctx, cons) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: cons.maxHeight),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // 이메일
+                _buildField(
+                  '이메일',
+                  _emailCtrl,
+                  suffix: TextButton(
+                    onPressed: _checkEmailDup,
+                    child: const Text('중복확인'),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // 비밀번호
+                _buildField('비밀번호', _passwordCtrl, obscure: true),
+                const SizedBox(height: 16),
+                // 비밀번호 확인
+                _buildField(
+                    '비밀번호 확인', _confirmCtrl,
+                    obscure: true, errorText: _passwordError),
+                const SizedBox(height: 16),
+                // 이름
+                _buildField('이름', _nameCtrl),
+                const SizedBox(height: 16),
+                // 닉네임
+                _buildField(
+                  '닉네임',
+                  _nickCtrl,
+                  suffix: TextButton(
+                    onPressed: _checkNickDup,
+                    child: const Text('중복확인'),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // 휴대전화
+                _buildField('휴대전화', _phoneCtrl,
+                    keyboard: TextInputType.phone),
+                const SizedBox(height: 16),
+                // 성별
+                _buildGenderSelector(),
+                const SizedBox(height: 24),
+                // 가입하기
+                SizedBox(
+                  width: 320,
+                  child: ElevatedButton(
+                    onPressed: _register,
+                    child: const Text('가입하기'),
+                  ),
+                ),
+                // 에러 문구
+                if (_errorText != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    _errorText!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ],
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        );
+      }),
     );
   }
 
-  // ── 필드 빌더 ──
   Widget _buildField(
     String label,
     TextEditingController ctrl, {
@@ -288,7 +249,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // ── 성별 선택 ──
   Widget _buildGenderSelector() {
     return SizedBox(
       width: 320,
@@ -298,17 +258,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const Text('성별:'),
           const SizedBox(width: 16),
           Radio<String>(
-            value: 'M',
-            groupValue: _gender,
-            onChanged: (v) => setState(() => _gender = v),
-          ),
+              value: 'M',
+              groupValue: _gender,
+              onChanged: (v) => setState(() => _gender = v)),
           const Text('남자'),
           const SizedBox(width: 24),
           Radio<String>(
-            value: 'F',
-            groupValue: _gender,
-            onChanged: (v) => setState(() => _gender = v),
-          ),
+              value: 'F',
+              groupValue: _gender,
+              onChanged: (v) => setState(() => _gender = v)),
           const Text('여자'),
         ],
       ),
