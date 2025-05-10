@@ -1,257 +1,215 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  _RegisterScreenState createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
 
-  final _emailCtrl = TextEditingController();
-  final _pwCtrl = TextEditingController();
-  final _pwConfirmCtrl = TextEditingController();
-  final _nickCtrl = TextEditingController();
-  final _nameCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _nicknameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmController = TextEditingController();
 
-  String? _gender;
-  String _emailMsg = '';
-  String _nickMsg = '';
-  String _pwMatchMsg = '';
-  String _generalError = '';
-  bool _isLoading = false;
+  Timer? _emailDebounce;
+  Timer? _nickDebounce;
 
-  bool _emailOk = false;
-  bool _nickOk = false;
-  bool _pwMatch = false;
+  bool _isEmailChecked = false;
+  bool _emailExists = false;
+  bool _isNickChecked = false;
+  bool _nickExists = false;
+  bool _passwordsMatch = true;
+  String? _passwordError;
+
+  @override
+  void initState() {
+    super.initState();
+    _confirmController.addListener(_checkPasswordMatch);
+  }
 
   @override
   void dispose() {
-    _emailCtrl.dispose();
-    _pwCtrl.dispose();
-    _pwConfirmCtrl.dispose();
-    _nickCtrl.dispose();
-    _nameCtrl.dispose();
-    _phoneCtrl.dispose();
+    _emailDebounce?.cancel();
+    _nickDebounce?.cancel();
+    _emailController.dispose();
+    _nicknameController.dispose();
+    _passwordController.dispose();
+    _confirmController.dispose();
     super.dispose();
   }
 
-  Future<void> _checkEmail() async {
-    final email = _emailCtrl.text.trim();
-    if (email.isEmpty) return;
-    final methods = await _auth.fetchSignInMethodsForEmail(email);
+  void _checkPasswordMatch() {
     setState(() {
-      if (methods.isEmpty) {
-        _emailMsg = '사용 가능한 이메일입니다.';
-        _emailOk = true;
-      } else {
-        _emailMsg = '중복된 이메일입니다.';
-        _emailOk = false;
-      }
+      _passwordsMatch =
+          _passwordController.text == _confirmController.text;
+      _passwordError = _passwordsMatch ? null : 'Passwords do not match';
     });
   }
 
-  Future<void> _checkNick() async {
-    final nick = _nickCtrl.text.trim();
-    if (nick.isEmpty) return;
-    final qr = await _firestore.collection('users')
-        .where('nickname', isEqualTo: nick).get();
-    setState(() {
-      if (qr.docs.isEmpty) {
-        _nickMsg = '사용 가능한 닉네임입니다.';
-        _nickOk = true;
-      } else {
-        _nickMsg = '중복된 닉네임입니다.';
-        _nickOk = false;
-      }
+  void _checkEmailDuplicate() {
+    if (_emailDebounce?.isActive ?? false) _emailDebounce!.cancel();
+    _emailDebounce = Timer(const Duration(milliseconds: 500), () async {
+      final email = _emailController.text.trim();
+      if (email.isEmpty) return;
+      final query = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+      setState(() {
+        _isEmailChecked = true;
+        _emailExists = query.docs.isNotEmpty;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _emailExists ? 'Email already in use' : 'Email available',
+          ),
+        ),
+      );
     });
   }
 
-  void _checkPwMatch() {
-    setState(() {
-      _pwMatch = _pwCtrl.text == _pwConfirmCtrl.text;
-      _pwMatchMsg = _pwMatch ? '비밀번호가 일치합니다.' : '비밀번호가 일치하지 않습니다.';
+  void _checkNickDuplicate() {
+    if (_nickDebounce?.isActive ?? false) _nickDebounce!.cancel();
+    _nickDebounce = Timer(const Duration(milliseconds: 500), () async {
+      final nick = _nicknameController.text.trim();
+      if (nick.isEmpty) return;
+      final query = await _firestore
+          .collection('users')
+          .where('nickname', isEqualTo: nick)
+          .limit(1)
+          .get();
+      setState(() {
+        _isNickChecked = true;
+        _nickExists = query.docs.isNotEmpty;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _nickExists ? 'Nickname already in use' : 'Nickname available',
+          ),
+        ),
+      );
     });
   }
 
   Future<void> _register() async {
-    setState(() {
-      _generalError = '';
-      _isLoading = true;
-    });
-    if (_emailCtrl.text.isEmpty ||
-        _pwCtrl.text.isEmpty ||
-        _pwConfirmCtrl.text.isEmpty ||
-        _nickCtrl.text.isEmpty ||
-        _nameCtrl.text.isEmpty ||
-        _phoneCtrl.text.isEmpty ||
-        _gender == null) {
-      setState(() {
-        _generalError = '모든 항목을 입력해주세요.';
-        _isLoading = false;
-      });
+    final email = _emailController.text.trim();
+    final nickname = _nicknameController.text.trim();
+    final password = _passwordController.text;
+    final confirm = _confirmController.text;
+
+    if (email.isEmpty ||
+        nickname.isEmpty ||
+        password.isEmpty ||
+        confirm.isEmpty) {
+      _showError('Please fill in all fields');
       return;
     }
-    if (_pwCtrl.text.length < 10) {
-      setState(() {
-        _generalError = '비밀번호는 최소 10자 이상이어야 합니다.';
-        _isLoading = false;
-      });
+    if (!_isEmailChecked || _emailExists) {
+      _showError('Please check your email');
       return;
     }
-    if (!_pwMatch) {
-      setState(() {
-        _generalError = '비밀번호가 일치하지 않습니다.';
-        _isLoading = false;
-      });
+    if (!_isNickChecked || _nickExists) {
+      _showError('Please check your nickname');
       return;
     }
-    if (!_emailOk || !_nickOk) {
-      setState(() {
-        _generalError = '이메일과 닉네임 중복확인을 해주세요.';
-        _isLoading = false;
-      });
+    if (!_passwordsMatch) {
+      _showError('Passwords do not match');
       return;
     }
     try {
-      final cred = await _auth.createUserWithEmailAndPassword(
-        email: _emailCtrl.text.trim(),
-        password: _pwCtrl.text,
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
       );
-      await _firestore.collection('users').doc(cred.user!.uid).set({
-        'email': _emailCtrl.text.trim(),
-        'nickname': _nickCtrl.text.trim(),
-        'name': _nameCtrl.text.trim(),
-        'phone': _phoneCtrl.text.trim(),
-        'gender': _gender,
-        'created_at': FieldValue.serverTimestamp(),
+      await _firestore
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .set({
+        'email': email,
+        'nickname': nickname,
+        'createdAt': FieldValue.serverTimestamp(),
       });
-      await cred.user!.sendEmailVerification();
-      Navigator.pushReplacementNamed(context, '/emailVerify');
-    } on FirebaseAuthException catch (e) {
-      setState(() {
-        _generalError = e.message ?? '회원가입 오류';
-        _isLoading = false;
-      });
+      Navigator.of(context).pop();
+    } catch (e) {
+      String message = 'Registration failed';
+      if (e is FirebaseAuthException) {
+        message = e.message ?? message;
+      } else if (kIsWeb && e.toString().contains('JavaScriptObject')) {
+        message = 'Web: unexpected error occurred';
+      }
+      _showError(message);
     }
   }
 
-  Widget _buildField({
-    required String label,
-    required TextEditingController ctrl,
-    bool obscure = false,
-    void Function(String)? onChanged,
-    Widget? suffix,
-  }) {
-    final w = MediaQuery.of(context).size.width * 0.6;
-    return Column(
-      children: [
-        Text(label, textAlign: TextAlign.center),
-        SizedBox(
-          width: w,
-          child: TextField(
-            controller: ctrl,
-            obscureText: obscure,
-            onChanged: onChanged,
-            textAlign: TextAlign.center,
-            decoration: InputDecoration(
-              border: const UnderlineInputBorder(),
-              contentPadding: const EdgeInsets.symmetric(vertical: 8),
-              suffixIcon: suffix,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-      ],
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('회원가입')),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              _buildField(
-                label: '이메일(아이디)',
-                ctrl: _emailCtrl,
-                onChanged: (_) {
-                  setState(() {
-                    _emailOk = false;
-                    _emailMsg = '';
-                  });
-                },
-                suffix: TextButton(onPressed: _checkEmail, child: const Text('중복확인')),
+      appBar: AppBar(title: Text('Register')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: _emailController,
+              decoration: InputDecoration(
+                labelText: 'Email',
+                suffix: TextButton(
+                  onPressed: _checkEmailDuplicate,
+                  child: Text('Check'),
+                ),
               ),
-              Text(_emailMsg, style: TextStyle(color: _emailOk ? Colors.blue : Colors.red)),
-              const SizedBox(height: 12),
-
-              _buildField(
-                label: '비밀번호 (10자 이상)',
-                ctrl: _pwCtrl,
-                obscure: true,
-                onChanged: (_) => _checkPwMatch(),
+            ),
+            SizedBox(height: 16),
+            TextField(
+              controller: _nicknameController,
+              decoration: InputDecoration(
+                labelText: 'Nickname',
+                suffix: TextButton(
+                  onPressed: _checkNickDuplicate,
+                  child: Text('Check'),
+                ),
               ),
-              const SizedBox(height: 12),
-
-              _buildField(
-                label: '비밀번호 확인',
-                ctrl: _pwConfirmCtrl,
-                obscure: true,
-                onChanged: (_) => _checkPwMatch(),
+            ),
+            SizedBox(height: 16),
+            TextField(
+              controller: _passwordController,
+              obscureText: true,
+              decoration: InputDecoration(labelText: 'Password'),
+            ),
+            SizedBox(height: 16),
+            TextField(
+              controller: _confirmController,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: 'Confirm Password',
+                errorText: _passwordError,
               ),
-              Text(_pwMatchMsg, style: TextStyle(color: _pwMatch ? Colors.blue : Colors.red)),
-              const SizedBox(height: 12),
-
-              _buildField(
-                label: '닉네임',
-                ctrl: _nickCtrl,
-                onChanged: (_) {
-                  setState(() {
-                    _nickOk = false;
-                    _nickMsg = '';
-                  });
-                },
-                suffix: TextButton(onPressed: _checkNick, child: const Text('중복확인')),
-              ),
-              Text(_nickMsg, style: TextStyle(color: _nickOk ? Colors.blue : Colors.red)),
-              const SizedBox(height: 12),
-
-              _buildField(label: '이름', ctrl: _nameCtrl),
-              const SizedBox(height: 12),
-
-              _buildField(label: '휴대전화번호', ctrl: _phoneCtrl),
-              const SizedBox(height: 20),
-
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Radio<String>(value: '남성', groupValue: _gender, onChanged: (v) => setState(() => _gender = v)),
-                const Text('남성'),
-                const SizedBox(width: 20),
-                Radio<String>(value: '여성', groupValue: _gender, onChanged: (v) => setState(() => _gender = v)),
-                const Text('여성'),
-              ]),
-              const SizedBox(height: 20),
-
-              if (_generalError.isNotEmpty)
-                Text(_generalError, style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),
-              const SizedBox(height: 20),
-
-              ElevatedButton(
-                onPressed: _isLoading ? null : _register,
-                child: _isLoading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('회원가입'),
-              ),
-            ],
-          ),
+            ),
+            SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: _register,
+              child: Text('Sign Up'),
+            ),
+          ],
         ),
       ),
     );

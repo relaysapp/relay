@@ -1,74 +1,126 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/comment.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RelayScreen extends StatefulWidget {
-  const RelayScreen({super.key});
   @override
-  State<RelayScreen> createState() => _RelayScreenState();
+  _RelayScreenState createState() => _RelayScreenState();
 }
 
 class _RelayScreenState extends State<RelayScreen> {
-  final _ctrl = TextEditingController();
+  final _firestore = FirebaseFirestore.instance;
+  final TextEditingController _commentController = TextEditingController();
+  late final Stream<QuerySnapshot> _commentStream;
 
-  Future<void> _addComment() async {
-    if (_ctrl.text.trim().isEmpty) return;
-    await FirebaseFirestore.instance.collection('comments').add({
-      'content': _ctrl.text.trim(),
-      'nickname': '현재유저닉네임', // 나중에 실제 닉네임으로 교체
-      'timestamp': FieldValue.serverTimestamp(),
-    });
-    _ctrl.clear();
+  @override
+  void initState() {
+    super.initState();
+    _commentStream = _firestore
+        .collection('relay_comments')
+        .orderBy('timestamp', descending: false)
+        .snapshots();
   }
 
-  Stream<List<Comment>> _comments() {
-    return FirebaseFirestore.instance
-        .collection('comments')
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .map((snap) =>
-            snap.docs.map((doc) => Comment.fromMap(doc.id, doc.data()!)).toList());
+  Future<void> _postComment() async {
+    final text = _commentController.text.trim();
+    if (text.isEmpty) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please login first')),
+      );
+      return;
+    }
+
+    try {
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final nickname = userDoc.data()?['nickname'] ?? 'Anonymous';
+
+      await _firestore.collection('relay_comments').add({
+        'uid': user.uid,
+        'nickname': nickname,
+        'text': text,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      _commentController.clear();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error posting comment')),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildCommentList() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _commentStream,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Error loading comments'));
+        }
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return Center(child: Text('No comments yet'));
+        }
+        return ListView.builder(
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final data = docs[index].data() as Map<String, dynamic>;
+            return ListTile(
+              title: Text(data['nickname'] ?? 'Anonymous'),
+              subtitle: Text(data['text'] ?? ''),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('릴레이 댓글')),
-      body: Column(children: [
-        Expanded(
-          child: StreamBuilder<List<Comment>>(
-            stream: _comments(),
-            builder: (context, snap) {
-              if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-              final list = snap.data!;
-              return ListView.builder(
-                reverse: true,
-                itemCount: list.length,
-                itemBuilder: (c, i) {
-                  final cm = list[i];
-                  return ListTile(
-                    title: Text(cm.content),
-                    subtitle: Text('${cm.nickname} • ${cm.timestamp.toLocal()}'),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(children: [
-            Expanded(
-              child: TextField(
-                controller: _ctrl,
-                decoration: const InputDecoration(hintText: '댓글을 입력하세요...', border: OutlineInputBorder()),
-              ),
+      appBar: AppBar(
+        title: Text('Relay'),
+      ),
+      body: Column(
+        children: [
+          Expanded(child: _buildCommentList()),
+          Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _commentController,
+                    decoration: InputDecoration(
+                      hintText: 'Enter comment',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _postComment,
+                  child: Text('Send'),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            ElevatedButton(onPressed: _addComment, child: const Text('작성')),
-          ]),
-        ),
-      ]),
+          ),
+        ],
+      ),
     );
   }
 }
