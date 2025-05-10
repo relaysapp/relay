@@ -2,50 +2,81 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key});
+  const ResetPasswordScreen({Key? key}) : super(key: key);
   @override
-  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  _ResetPasswordScreenState createState() => _ResetPasswordScreenState();
 }
 
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
-  final emailController = TextEditingController();
-  String message = '';
+  final _emailCtrl = TextEditingController();
+  bool _sent = false;
 
-  Future<void> _sendReset() async {
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final e = _emailCtrl.text.trim();
+    if (e.isEmpty) return;
     try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: emailController.text.trim());
-      setState(() => message = '비밀번호 재설정 메일을 보냈습니다.');
-    } catch (e) {
-      setState(() => message = '오류 발생: 이메일을 확인해주세요.');
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: e);
+      setState(() => _sent = true);
+    } catch (_) {
+      setState(() => _sent = false);
+      // inline errorText or snackbar if needed
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width / 3;
     return Scaffold(
-      appBar: AppBar(title: const Text('비밀번호 찾기')),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('비밀번호 재설정', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: width,
-                child: TextField(
-                  controller: emailController,
-                  decoration: const InputDecoration(labelText: '이메일'),
+      // back arrow
+      appBar: AppBar(
+        automaticallyImplyLeading: true,
+        centerTitle: true,
+        title: const Text('비밀번호 찾기'),
+      ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 제목: 가운데, 아래쪽으로
+                const SizedBox(height: 16),
+                const Text(
+                  '비밀번호 재설정 메일 전송',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 12),
-              Text(message, style: const TextStyle(color: Colors.blue)),
-              const SizedBox(height: 12),
-              ElevatedButton(onPressed: _sendReset, child: const Text('전송')),
-            ],
+                const SizedBox(height: 24),
+
+                // 이메일 입력
+                SizedBox(
+                  width: 320,
+                  child: TextField(
+                    controller: _emailCtrl,
+                    decoration: const InputDecoration(
+                      labelText: '이메일',
+                      border: UnderlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // 전송 버튼
+                SizedBox(
+                  width: 320,
+                  child: ElevatedButton(
+                    onPressed: _send,
+                    child: Text(_sent ? '전송됨' : '전송하기'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
