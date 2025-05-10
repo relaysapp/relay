@@ -1,6 +1,6 @@
 // lib/screens/register_screen.dart
 
-import 'dart:async';                        // ★ 추가
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,7 +8,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
-
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
 }
@@ -18,20 +17,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _firestore = FirebaseFirestore.instance;
 
   final TextEditingController _emailCtrl = TextEditingController();
+  final TextEditingController _passwordCtrl = TextEditingController();
+  final TextEditingController _confirmCtrl = TextEditingController();
   final TextEditingController _nameCtrl = TextEditingController();
   final TextEditingController _nickCtrl = TextEditingController();
   final TextEditingController _phoneCtrl = TextEditingController();
-  final TextEditingController _passwordCtrl = TextEditingController();
-  final TextEditingController _confirmCtrl = TextEditingController();
 
-  Timer? _emailDebounce;    // Timer 타입이 정의됩니다.
+  Timer? _emailDebounce;
   Timer? _nickDebounce;
 
   bool _emailChecked = false, _emailExists = false;
   bool _nickChecked = false, _nickExists = false;
   bool _passwordsMatch = true;
   String? _passwordError;
-  String? _gender; // 'M' 또는 'F'
+  String? _gender; // 'M' or 'F'
 
   @override
   void initState() {
@@ -44,19 +43,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailDebounce?.cancel();
     _nickDebounce?.cancel();
     _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    _confirmCtrl.dispose();
     _nameCtrl.dispose();
     _nickCtrl.dispose();
     _phoneCtrl.dispose();
-    _passwordCtrl.dispose();
-    _confirmCtrl.dispose();
     super.dispose();
   }
 
   void _checkPasswordMatch() {
     setState(() {
       _passwordsMatch = _passwordCtrl.text == _confirmCtrl.text;
-      _passwordError =
-          _passwordsMatch ? null : '비밀번호가 일치하지 않습니다.';
+      _passwordError = _passwordsMatch ? null : '비밀번호가 일치하지 않습니다.';
     });
   }
 
@@ -110,15 +108,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _register() async {
     final email = _emailCtrl.text.trim();
+    final pass = _passwordCtrl.text;
+    final conf = _confirmCtrl.text;
     final name = _nameCtrl.text.trim();
     final nick = _nickCtrl.text.trim();
     final phone = _phoneCtrl.text.trim();
-    final pass = _passwordCtrl.text;
-    final conf = _confirmCtrl.text;
 
-    if ([email, name, nick, phone, pass, conf, _gender]
+    if ([email, pass, conf, name, nick, phone, _gender]
         .contains(null) ||
-        [email, name, nick, phone, pass, conf].any((s) => s.isEmpty)) {
+        [email, pass, conf, name, nick, phone].any((s) => s.isEmpty)) {
       _showError('모든 항목을 입력해 주세요.');
       return;
     }
@@ -162,47 +160,56 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   @override
-  Widget build(BuildContext c) {
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('회원가입')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildField('이메일', _emailCtrl, suffix: TextButton(
-                onPressed: _checkEmailDup, child: const Text('중복확인'),
-              )),
-              const SizedBox(height: 16),
-              _buildField('이름', _nameCtrl),
-              const SizedBox(height: 16),
-              _buildField('닉네임', _nickCtrl, suffix: TextButton(
-                onPressed: _checkNickDup, child: const Text('중복확인'),
-              )),
-              const SizedBox(height: 16),
-              _buildField('휴대전화', _phoneCtrl, keyboard: TextInputType.phone),
-              const SizedBox(height: 16),
-              _buildGenderSelector(),
+              const Text('회원가입',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 32),
+
+              // 순서: 이메일/비밀번호/비밀번호 확인/이름/닉네임/휴대전화/성별
+              _buildField('이메일', _emailCtrl,
+                  suffix: TextButton(
+                      onPressed: _checkEmailDup, child: const Text('중복확인'))),
               const SizedBox(height: 16),
               _buildField('비밀번호', _passwordCtrl, obscure: true),
               const SizedBox(height: 16),
               _buildField('비밀번호 확인', _confirmCtrl,
                   obscure: true, errorText: _passwordError),
+              const SizedBox(height: 16),
+              _buildField('이름', _nameCtrl),
+              const SizedBox(height: 16),
+              _buildField('닉네임', _nickCtrl,
+                  suffix: TextButton(
+                      onPressed: _checkNickDup, child: const Text('중복확인'))),
+              const SizedBox(height: 16),
+              _buildField('휴대전화', _phoneCtrl,
+                  keyboard: TextInputType.phone),
+              const SizedBox(height: 16),
+              _buildGenderSelector(),
               const SizedBox(height: 32),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: () =>
-                        Navigator.pushNamed(c, '/reset_password'),
-                    child: const Text('비밀번호 찾기'),
-                  ),
-                  ElevatedButton(
-                    onPressed: _register,
-                    child: const Text('가입하기'),
-                  ),
-                ],
+
+              // 가입하기 버튼 (가운데 정렬)
+              SizedBox(
+                width: 320,
+                child: ElevatedButton(
+                  onPressed: _register,
+                  child: const Text('가입하기'),
+                ),
               ),
             ],
           ),
@@ -220,8 +227,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       width: 320,
       child: TextField(
         controller: ctrl,
-        keyboardType: keyboard,
         obscureText: obscure,
+        keyboardType: keyboard,
         decoration: InputDecoration(
           labelText: label,
           errorText: errorText,
